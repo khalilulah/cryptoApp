@@ -5,6 +5,7 @@ import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  Button,
   FlatList,
   Image,
   RefreshControl,
@@ -29,6 +30,7 @@ const index = () => {
   const intervalRef = useRef<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [allCoins, setAllCoins] = useState([]);
+  const [timeoutError, setTimeoutError] = useState(false);
 
   // Fetch coins on component mount
   useEffect(() => {
@@ -95,10 +97,18 @@ const index = () => {
   }, [pageNum]);
 
   const fetchCoins = async (pageNumber = 1, silentRefresh = false) => {
+    setTimeoutError(false);
+    // Timeout handler
+    const timeout = setTimeout(() => {
+      setTimeoutError(true);
+      setLoading(false);
+    }, 10000);
+
     try {
       if (!silentRefresh) {
         setError(null);
       }
+
       const result = await coinGeckoService.getCoinMarkets({
         vs_currency: "usd",
         order: "market_cap_desc",
@@ -140,6 +150,7 @@ const index = () => {
         setError(err.message);
       }
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
       setRefreshing(false);
     }
@@ -217,6 +228,17 @@ const index = () => {
 
   if (!isConnected && error) {
     return <NoConnection onRetry={onRetry} />;
+  }
+
+  if (timeoutError) {
+    return (
+      <View style={{ alignItems: "center", marginTop: 40 }}>
+        <Text style={{ marginBottom: 10 }}>
+          Failed to fetch data. Please check your connection.
+        </Text>
+        <Button title="Reload" onPress={onRetry} />
+      </View>
+    );
   }
 
   if (error) {
