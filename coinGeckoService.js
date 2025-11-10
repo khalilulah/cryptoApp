@@ -66,6 +66,30 @@ class CoinGeckoService {
     };
     return this.fetchData("/coins/markets", defaultParams);
   }
+
+  // Get specific coin data by ID
+  async getCoinById(coinId, params = {}) {
+    const defaultParams = {
+      localization: false,
+      tickers: false,
+      market_data: true,
+      community_data: false,
+      developer_data: false,
+      ...params,
+    };
+    return this.fetchData(`/coins/${coinId}`, defaultParams);
+  }
+
+  // Get coin market chart (price history)
+  async getCoinMarketChart(coinId, params = {}) {
+    const defaultParams = {
+      vs_currency: "usd",
+      days: "7",
+      interval: "daily",
+      ...params,
+    };
+    return this.fetchData(`/coins/${coinId}/market_chart`, defaultParams);
+  }
 }
 
 export default new CoinGeckoService();

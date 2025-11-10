@@ -1,4 +1,6 @@
+import { useTheme } from "@/theme";
 import { useNetworkStatus } from "@/useNetworkStatus";
+import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
@@ -7,12 +9,14 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import coinGeckoService from "../../coinGeckoService";
 import { NoConnection } from "../../components/NoConnection";
 
 const index = () => {
+  const { theme, wp, hp } = useTheme();
   const { isConnected, isInternetReachable } = useNetworkStatus();
   const [coins, setCoins] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -114,17 +118,52 @@ const index = () => {
   };
 
   const renderCoinItem = ({ item }: { item: any }) => (
-    <View style={styles.coinItem}>
+    <TouchableOpacity
+      onPress={() =>
+        router.push({
+          pathname: "/SinglrCoin",
+          params: {
+            coinId: item.id,
+          },
+        })
+      }
+      style={[styles.coinItem, { borderBottomColor: theme.colors.secondary }]}
+    >
       <Image source={{ uri: item.image }} style={styles.coinImage} />
       <View style={styles.coinInfo}>
-        <Text style={styles.coinName}>{item.name}</Text>
-        <Text style={styles.coinSymbol}>{item.symbol.toUpperCase()}</Text>
+        <Text
+          style={{
+            fontFamily: theme.fonts.clash.medium,
+            fontSize: theme.fontSize.md,
+          }}
+        >
+          {item.name}
+        </Text>
+        <Text
+          style={{
+            fontFamily: theme.fonts.clash.medium,
+            fontSize: theme.fontSize.sm,
+            color: theme.colors.ligthText,
+          }}
+        >
+          {item.symbol.toUpperCase()}
+        </Text>
       </View>
       <View style={styles.priceInfo}>
-        <Text style={styles.price}>${item.current_price.toLocaleString()}</Text>
+        <Text
+          style={{
+            fontFamily: theme.fonts.clash.medium,
+            fontSize: theme.fontSize.md,
+          }}
+        >
+          ${item.current_price.toLocaleString()}
+        </Text>
         <Text
           style={[
-            styles.change,
+            {
+              fontFamily: theme.fonts.poppins.regular,
+              fontSize: theme.fontSize.sm,
+            },
             item.price_change_percentage_24h >= 0
               ? styles.positiveChange
               : styles.negativeChange,
@@ -134,7 +173,7 @@ const index = () => {
           {item.price_change_percentage_24h?.toFixed(2)}%
         </Text>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   if (!isConnected) {
@@ -150,20 +189,19 @@ const index = () => {
     );
   }
 
-  // if (error) {
-  //   return (
-  //     <View style={styles.centered}>
-  //       <Text style={styles.errorText}>Something went wrong</Text>
-  //       <TouchableOpacity style={styles.errorHint} onPress={onRetry}>
-  //         <Text>try again</Text>
-  //       </TouchableOpacity>
-  //     </View>
-  //   );
-  // }
+  if (error) {
+    return (
+      <View style={styles.centered}>
+        <Text style={styles.errorText}>Something went wrong</Text>
+        <TouchableOpacity style={styles.errorHint} onPress={onRetry}>
+          <Text>try again</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.container}>
-      <Text style={styles.header}>Crypto Prices</Text>
       <FlatList
         data={coins}
         renderItem={renderCoinItem}
@@ -210,16 +248,12 @@ const styles = StyleSheet.create({
   coinItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#fff",
+
     padding: 16,
-    marginVertical: 4,
+
     marginHorizontal: 8,
-    borderRadius: 8,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+
+    borderBottomWidth: 1,
   },
   coinImage: {
     width: 40,
