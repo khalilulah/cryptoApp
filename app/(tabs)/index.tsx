@@ -1,5 +1,6 @@
 import { useTheme } from "@/theme";
 import { useNetworkStatus } from "@/useNetworkStatus";
+import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
 import React, { useEffect, useRef, useState } from "react";
 import {
@@ -9,6 +10,7 @@ import {
   RefreshControl,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
@@ -25,6 +27,8 @@ const index = () => {
   const [pageNum, setPageNum] = useState(1);
   const isMounted = useRef(true);
   const intervalRef = useRef<number | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [allCoins, setAllCoins] = useState([]);
 
   // Fetch coins on component mount
   useEffect(() => {
@@ -48,6 +52,28 @@ const index = () => {
 
   const onRetry = () => {
     fetchCoins();
+  };
+
+  const handleSearch = (text: string) => {
+    setSearchQuery(text);
+
+    if (text.trim() === "") {
+      // Show all coin
+      setCoins(allCoins);
+    } else {
+      // Filter
+      const searchResults = allCoins.filter(
+        (item: any) =>
+          item.name.toLowerCase().includes(text.toLowerCase()) ||
+          item.symbol.toLowerCase().includes(text.toLowerCase())
+      );
+      setCoins(searchResults);
+    }
+  };
+
+  const clearSearch = () => {
+    setSearchQuery("");
+    setCoins(allCoins);
   };
 
   // Update interval when pageNum changes
@@ -87,12 +113,24 @@ const index = () => {
           refreshing || pageNumber === 1
             ? result.data
             : Array.from(
-                new Set([...coins, ...result.data].map((coin) => coin.id))
+                new Set([...allCoins, ...result.data].map((coin) => coin.id))
               ).map((id) =>
-                [...coins, ...result.data].find((coin) => coin.id === id)
+                [...allCoins, ...result.data].find((coin) => coin.id === id)
               );
+        setAllCoins(uniqueCoin);
 
-        setCoins(uniqueCoin);
+        // Apply search filter if there's a search query
+        if (searchQuery.trim() !== "") {
+          const filtered = uniqueCoin.filter(
+            (item: any) =>
+              item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+              item.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+          );
+          setCoins(filtered);
+        } else {
+          setCoins(uniqueCoin);
+        }
+
         setPageNum(pageNumber);
       } else {
         setError(result.error);
@@ -114,6 +152,7 @@ const index = () => {
 
   const onRefresh = () => {
     setRefreshing(true);
+    setSearchQuery("");
     fetchCoins();
   };
 
@@ -176,7 +215,11 @@ const index = () => {
     </TouchableOpacity>
   );
 
-  if (!isConnected) {
+  if (!isConnected && error) {
+    return <NoConnection onRetry={onRetry} />;
+  }
+
+  if (error) {
     return <NoConnection onRetry={onRetry} />;
   }
 
@@ -189,19 +232,66 @@ const index = () => {
     );
   }
 
-  if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Something went wrong</Text>
-        <TouchableOpacity style={styles.errorHint} onPress={onRetry}>
-          <Text>try again</Text>
-        </TouchableOpacity>
-      </View>
-    );
-  }
-
   return (
     <View style={styles.container}>
+      {/* SEARCH BAR */}
+      <View
+        style={{
+          flexDirection: "row",
+          alignItems: "center",
+          backgroundColor: theme.colors.background,
+          borderRadius: wp(6),
+          paddingHorizontal: wp(4),
+          marginVertical: hp(2),
+          borderWidth: 1,
+          borderColor: theme.colors.border,
+          minHeight: hp(6),
+          width: wp(90),
+          alignSelf: "center",
+        }}
+      >
+        <Ionicons
+          name="search"
+          size={wp(5)}
+          color={theme.colors.textSecondary}
+        />
+        <TextInput
+          style={{
+            flex: 1,
+            marginLeft: wp(2.5),
+            fontSize: wp(4),
+            color: theme.colors.primary,
+            fontFamily: theme.fonts.clash.medium,
+          }}
+          placeholder={"search for coin"}
+          placeholderTextColor={theme.colors.textSecondary}
+          value={searchQuery}
+          onChangeText={handleSearch}
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={clearSearch}>
+            <Ionicons
+              name="close-circle"
+              size={wp(5)}
+              color={theme.colors.secondary}
+            />
+          </TouchableOpacity>
+        )}
+      </View>
+      {/* No results message */}
+      {searchQuery.length > 0 && coins.length === 0 && (
+        <View style={styles.noResults}>
+          <Text
+            style={{
+              fontFamily: theme.fonts.poppins.regular,
+              fontSize: theme.fontSize.sm,
+              textAlign: "center",
+            }}
+          >
+            No coins found for "{searchQuery}"
+          </Text>
+        </View>
+      )}
       <FlatList
         data={coins}
         renderItem={renderCoinItem}
@@ -213,7 +303,7 @@ const index = () => {
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
         ListFooterComponent={
-          coins.length > 0 ? (
+          coins.length > 0 && searchQuery.length === 0 ? (
             <ActivityIndicator
               style={{ marginVertical: 20 }}
               size="large"
@@ -305,5 +395,14 @@ const styles = StyleSheet.create({
     color: "#666",
     textAlign: "center",
     marginTop: 8,
+  },
+  noResults: {
+    padding: 20,
+    alignItems: "center",
+  },
+  noResultsText: {
+    fontSize: 16,
+    color: "#666",
+    textAlign: "center",
   },
 });
