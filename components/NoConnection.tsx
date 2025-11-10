@@ -1,3 +1,5 @@
+import { useTheme } from "@/theme";
+import { Ionicons } from "@expo/vector-icons";
 import React from "react";
 import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 
@@ -6,9 +8,14 @@ interface NoConnectionProps {
 }
 
 export const NoConnection: React.FC<NoConnectionProps> = ({ onRetry }) => {
+  const { wp, theme } = useTheme();
   return (
     <View style={localStyles.container}>
-      <Text style={localStyles.emoji}>📡</Text>
+      <Ionicons
+        name="cloud-offline-outline"
+        size={wp(15)}
+        color={theme.colors.textSecondary}
+      />
       <Text style={localStyles.title}>No Internet Connection</Text>
       <Text style={localStyles.text}>
         Please check your internet connection and try again

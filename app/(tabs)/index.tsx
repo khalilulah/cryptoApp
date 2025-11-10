@@ -19,7 +19,7 @@ import { NoConnection } from "../../components/NoConnection";
 
 const index = () => {
   const { theme, wp, hp } = useTheme();
-  const { isConnected, isInternetReachable } = useNetworkStatus();
+  const { isConnected } = useNetworkStatus();
   const [coins, setCoins] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);

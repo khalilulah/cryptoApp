@@ -1,5 +1,6 @@
 import coinGeckoService from "@/coinGeckoService";
 import { useTheme } from "@/theme";
+import { useNetworkStatus } from "@/useNetworkStatus";
 import React, { useEffect, useState } from "react";
 import {
   ActivityIndicator,
@@ -17,6 +18,7 @@ import Svg, {
   Stop,
   Text as SvgText,
 } from "react-native-svg";
+import { NoConnection } from "./NoConnection";
 
 const { width } = Dimensions.get("window");
 
@@ -31,6 +33,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState("7");
   const [priceChange, setPriceChange] = useState(0);
+  const { isConnected } = useNetworkStatus();
 
   const periods = [
     { label: "1D", value: "1" },
@@ -44,6 +47,9 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
     fetchChartData();
   }, [coinId, selectedPeriod]);
 
+  const onRetry = () => {
+    fetchChartData();
+  };
   const fetchChartData = async () => {
     try {
       setLoading(true);
@@ -199,12 +205,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
     );
   }
 
+  if (!isConnected && error) {
+    return <NoConnection onRetry={onRetry} />;
+  }
+
   if (error) {
-    return (
-      <View style={styles.centered}>
-        <Text style={styles.errorText}>Unable to load chart</Text>
-      </View>
-    );
+    return <NoConnection onRetry={onRetry} />;
   }
 
   const isPositive = priceChange >= 0;

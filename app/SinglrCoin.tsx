@@ -1,6 +1,8 @@
 import coinGeckoService from "@/coinGeckoService";
+import { NoConnection } from "@/components/NoConnection";
 import { PriceChart } from "@/components/PriceChart";
 import { useTheme } from "@/theme";
+import { useNetworkStatus } from "@/useNetworkStatus";
 import { useLocalSearchParams } from "expo-router";
 import React, { useEffect, useState } from "react";
 import {
@@ -16,7 +18,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 const SingleCoin = () => {
   const { wp, theme, hp } = useTheme();
   const params = useLocalSearchParams();
-
+  const { isConnected } = useNetworkStatus();
   // Handle both string and array cases
   const coinId = Array.isArray(params.coinId)
     ? params.coinId[0]
@@ -25,6 +27,10 @@ const SingleCoin = () => {
   const [coin, setCoin] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const onRetry = () => {
+    fetchCoin();
+  };
 
   useEffect(() => {
     if (coinId) {
@@ -59,20 +65,19 @@ const SingleCoin = () => {
     }
   };
 
+  if (!isConnected && error) {
+    return <NoConnection onRetry={onRetry} />;
+  }
+
+  if (error) {
+    return <NoConnection onRetry={onRetry} />;
+  }
+
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>
         <ActivityIndicator size="large" color="#0066cc" />
         <Text style={styles.loadingText}>Loading coin details...</Text>
-      </SafeAreaView>
-    );
-  }
-
-  if (error) {
-    return (
-      <SafeAreaView style={styles.centered}>
-        <Text style={styles.errorText}>Error: {error}</Text>
-        <Text style={styles.errorHint}>Coin ID: {coinId}</Text>
       </SafeAreaView>
     );
   }
