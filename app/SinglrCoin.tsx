@@ -42,13 +42,21 @@ const SingleCoin = () => {
 
   const fetchCoin = async () => {
     setTimeoutError(false);
-    // Timeout handler
-    const timeout = setTimeout(() => {
-      setTimeoutError(true);
-      setLoading(false);
-    }, 7000);
-    try {
+
+    // Don't show loading spinner if we already have cached data
+    if (!coin) {
       setLoading(true);
+    }
+
+    const timeout = setTimeout(() => {
+      if (!coin) {
+        // Only show timeout error if no cached data
+        setTimeoutError(true);
+        setLoading(false);
+      }
+    }, 7000);
+
+    try {
       setError(null);
 
       const result = await coinGeckoService.getCoinById(coinId, {
@@ -61,9 +69,15 @@ const SingleCoin = () => {
 
       if (result.success) {
         setCoin(result.data);
+      } else if (!coin) {
+        // Only set error if no cached data to show
+        setError("Failed to fetch coin data");
       }
     } catch (error: any) {
-      setError(error.message);
+      if (!coin) {
+        // Only set error if no cached data
+        setError(error.message);
+      }
       console.error("Fetch error:", error.message);
     } finally {
       clearTimeout(timeout);
@@ -119,6 +133,26 @@ const SingleCoin = () => {
 
   if (!isConnected && !coin) {
     return <NoConnection onRetry={onRetry} />;
+  }
+
+  if (!coin) {
+    return (
+      <SafeAreaView style={styles.centered}>
+        <ActivityIndicator size="large" color="#0066cc" />
+        <Text
+          style={[
+            {
+              fontFamily: theme.fonts.clash.medium,
+              fontSize: theme.fontSize.sm,
+              color: theme.colors.ligthText,
+            },
+            styles.loadingText,
+          ]}
+        >
+          Loading coin details...
+        </Text>
+      </SafeAreaView>
+    );
   }
 
   return (

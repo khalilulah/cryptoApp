@@ -105,7 +105,6 @@ const CoinListScreen = () => {
 
     const timeout = setTimeout(() => {
       if (allCoins.length === 0) {
-        // Only show timeout if no cached data
         setTimeoutError(true);
         setLoading(false);
       }
