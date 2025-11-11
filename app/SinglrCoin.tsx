@@ -106,12 +106,8 @@ const SingleCoin = () => {
     );
   }
 
-  if (!coin) {
-    return (
-      <SafeAreaView style={styles.centered}>
-        <Text style={styles.errorText}>No coin data available</Text>
-      </SafeAreaView>
-    );
+  if (!isConnected && !coin) {
+    return <NoConnection onRetry={onRetry} />;
   }
 
   return (
