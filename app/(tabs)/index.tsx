@@ -226,7 +226,7 @@ const index = () => {
     </TouchableOpacity>
   );
 
-  if (!isConnected && error) {
+  if (!isConnected && loading) {
     return <NoConnection onRetry={onRetry} />;
   }
 
