@@ -11,6 +11,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TouchableOpacity,
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -19,6 +20,7 @@ const SingleCoin = () => {
   const { wp, theme, hp } = useTheme();
   const params = useLocalSearchParams();
   const { isConnected } = useNetworkStatus();
+  const [timeoutError, setTimeoutError] = useState(false);
   // Handle both string and array cases
   const coinId = Array.isArray(params.coinId)
     ? params.coinId[0]
@@ -39,6 +41,12 @@ const SingleCoin = () => {
   }, [coinId]); // Add dependency array to prevent infinite loop
 
   const fetchCoin = async () => {
+    setTimeoutError(false);
+    // Timeout handler
+    const timeout = setTimeout(() => {
+      setTimeoutError(true);
+      setLoading(false);
+    }, 7000);
     try {
       setLoading(true);
       setError(null);
@@ -61,6 +69,7 @@ const SingleCoin = () => {
       setError(error.message);
       console.error("Fetch error:", error.message);
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
@@ -72,7 +81,25 @@ const SingleCoin = () => {
   if (error) {
     return <NoConnection onRetry={onRetry} />;
   }
-
+  if (timeoutError && loading) {
+    return (
+      <View style={{ alignItems: "center", marginTop: 40 }}>
+        <Text style={{ marginBottom: 10 }}>
+          Failed to fetch data. Please check your connection.
+        </Text>
+        <TouchableOpacity onPress={onRetry}>
+          <Text
+            style={{
+              marginBottom: 10,
+              fontFamily: theme.fonts.poppins.regular,
+            }}
+          >
+            Reload
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
   if (loading) {
     return (
       <SafeAreaView style={styles.centered}>

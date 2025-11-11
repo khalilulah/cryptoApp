@@ -39,7 +39,7 @@ const index = () => {
     // Set up interval to fetch data every 5 seconds
     intervalRef.current = setInterval(() => {
       if (isMounted.current && !refreshing) {
-        fetchCoins(pageNum, true); // Silent refresh (no loading indicator)
+        fetchCoins(pageNum, true);
       }
     }, 5000); // 5000ms = 5 seconds
 
@@ -230,7 +230,7 @@ const index = () => {
     return <NoConnection onRetry={onRetry} />;
   }
 
-  if (timeoutError) {
+  if (timeoutError && loading) {
     return (
       <View style={{ alignItems: "center", marginTop: 40 }}>
         <Text style={{ marginBottom: 10 }}>
@@ -332,6 +332,16 @@ const index = () => {
               color={"#0286FF"}
             />
           ) : null
+        }
+        ListEmptyComponent={
+          <View style={{ alignItems: "center", marginTop: 40 }}>
+            <Text style={{ marginBottom: 10 }}>
+              Failed to fetch data. Please check your connection.
+            </Text>
+            <TouchableOpacity onPress={onRetry}>
+              <Text>Reload</Text>
+            </TouchableOpacity>
+          </View>
         }
       />
     </View>

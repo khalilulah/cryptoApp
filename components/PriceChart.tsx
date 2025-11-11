@@ -34,6 +34,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
   const [selectedPeriod, setSelectedPeriod] = useState("7");
   const [priceChange, setPriceChange] = useState(0);
   const { isConnected } = useNetworkStatus();
+  const [timeoutError, setTimeoutError] = useState(false);
 
   const periods = [
     { label: "1D", value: "1" },
@@ -51,6 +52,12 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
     fetchChartData();
   };
   const fetchChartData = async () => {
+    setTimeoutError(false);
+    // Timeout handler
+    const timeout = setTimeout(() => {
+      setTimeoutError(true);
+      setLoading(false);
+    }, 5000);
     try {
       setLoading(true);
       setError(null);
@@ -85,6 +92,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
       setError(err.message);
       console.error("Chart fetch error:", err);
     } finally {
+      clearTimeout(timeout);
       setLoading(false);
     }
   };
@@ -208,7 +216,27 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
   if (!isConnected && error) {
     return <NoConnection onRetry={onRetry} />;
   }
-
+  if (timeoutError && loading) {
+    return (
+      <View style={{ alignItems: "center", marginTop: 40 }}>
+        <Text
+          style={{ marginBottom: 10, fontFamily: theme.fonts.poppins.regular }}
+        >
+          Something went wrong
+        </Text>
+        <TouchableOpacity onPress={onRetry}>
+          <Text
+            style={{
+              marginBottom: 10,
+              fontFamily: theme.fonts.poppins.regular,
+            }}
+          >
+            Reload
+          </Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
   if (error) {
     return <NoConnection onRetry={onRetry} />;
   }
