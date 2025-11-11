@@ -50,7 +50,7 @@ npx expo start
 
 ## Demo Video
 
-**[Watch Demo Video]()**
+**[Watch Demo Video](https://drive.google.com/file/d/1xLSOtyi2HLglEfTpyAgSH0-EocXljhij/view?usp=sharing)**
 
 The demo showcases search coin, view coin details, error and network handling.
 
@@ -60,7 +60,7 @@ The demo showcases search coin, view coin details, error and network handling.
 
 - **GitHub Repository**: [https://github.com/khalilulah/cryptoApp](https://github.com/khalilulah/cryptoApp)
 - **Latest Release**: [Download APK](https://drive.google.com/file/d/1kZNS2ILQHFVlcIhbed0KQTItrowIGAue/view?usp=sharing)
-- **Demo Video**: [click Link Watch]()
+- **Demo Video**: [click Link Watch](https://drive.google.com/file/d/1xLSOtyi2HLglEfTpyAgSH0-EocXljhij/view?usp=sharing)
 
 ---
 
