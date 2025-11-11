@@ -1,4 +1,3 @@
-import coinGeckoService from "@/coinGeckoService";
 import { NoConnection } from "@/components/NoConnection";
 import { PriceChart } from "@/components/PriceChart";
 import { useTheme } from "@/theme";
@@ -15,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import coinGeckoService from "../services/coinGeckoService";
 
 const SingleCoin = () => {
   const { wp, theme, hp } = useTheme();
@@ -38,7 +38,7 @@ const SingleCoin = () => {
     if (coinId) {
       fetchCoin();
     }
-  }, [coinId]); // Add dependency array to prevent infinite loop
+  }, [coinId]);
 
   const fetchCoin = async () => {
     setTimeoutError(false);
@@ -61,9 +61,6 @@ const SingleCoin = () => {
 
       if (result.success) {
         setCoin(result.data);
-      } else {
-        setError(result.error || "Failed to fetch coin data");
-        console.error("API Error:", result.error);
       }
     } catch (error: any) {
       setError(error.message);

@@ -15,10 +15,10 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import coinGeckoService from "../../coinGeckoService";
 import { NoConnection } from "../../components/NoConnection";
+import coinGeckoService from "../../services/coinGeckoService";
 
-const index = () => {
+const CoinListScreen = () => {
   const { theme, wp, hp } = useTheme();
   const { isConnected } = useNetworkStatus();
   const [coins, setCoins] = useState([]);
@@ -31,6 +31,7 @@ const index = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [allCoins, setAllCoins] = useState([]);
   const [timeoutError, setTimeoutError] = useState(false);
+  const [fromCache, setFromCache] = useState(false);
 
   // Fetch coins on component mount
   useEffect(() => {
@@ -41,7 +42,7 @@ const index = () => {
       if (isMounted.current && !refreshing) {
         fetchCoins(pageNum, true);
       }
-    }, 5000); // 5000ms = 5 seconds
+    }, 5000);
 
     // Cleanup function
     return () => {
@@ -60,10 +61,8 @@ const index = () => {
     setSearchQuery(text);
 
     if (text.trim() === "") {
-      // Show all coin
       setCoins(allCoins);
     } else {
-      // Filter
       const searchResults = allCoins.filter(
         (item: any) =>
           item.name.toLowerCase().includes(text.toLowerCase()) ||
@@ -98,10 +97,18 @@ const index = () => {
 
   const fetchCoins = async (pageNumber = 1, silentRefresh = false) => {
     setTimeoutError(false);
-    // Timeout handler
+
+    // Don't show loading if we have cached data
+    if (allCoins.length === 0 && !silentRefresh) {
+      setLoading(true);
+    }
+
     const timeout = setTimeout(() => {
-      setTimeoutError(true);
-      setLoading(false);
+      if (allCoins.length === 0) {
+        // Only show timeout if no cached data
+        setTimeoutError(true);
+        setLoading(false);
+      }
     }, 10000);
 
     try {
@@ -127,34 +134,39 @@ const index = () => {
               ).map((id) =>
                 [...allCoins, ...result.data].find((coin) => coin.id === id)
               );
-        setAllCoins(uniqueCoin);
 
-        // Apply search filter if there's a search query
-        if (searchQuery.trim() !== "") {
-          const filtered = uniqueCoin.filter(
-            (item: any) =>
-              item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-              item.symbol.toLowerCase().includes(searchQuery.toLowerCase())
-          );
-          setCoins(filtered);
-        } else {
-          setCoins(uniqueCoin);
+        // Only update if data is different (prevents unnecessary re-renders)
+        if (JSON.stringify(allCoins) !== JSON.stringify(uniqueCoin)) {
+          setAllCoins(uniqueCoin);
+
+          //  search filter
+          if (searchQuery.trim() !== "") {
+            const filtered = uniqueCoin.filter(
+              (item: any) =>
+                item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                item.symbol.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+            setCoins(filtered);
+          } else {
+            setCoins(uniqueCoin);
+          }
         }
 
         setPageNum(pageNumber);
-      } else {
-        setError(result.error);
+        setFromCache(result.fromCache || false);
       }
     } catch (err: any) {
-      if (!silentRefresh) {
+      if (!silentRefresh && allCoins.length === 0) {
         setError(err.message);
       }
+      console.log("Fetch error:", err.message);
     } finally {
       clearTimeout(timeout);
       setLoading(false);
       setRefreshing(false);
     }
   };
+
   const handleLoadMore = async () => {
     if (!loading && !refreshing) {
       await fetchCoins(pageNum + 1);
@@ -164,7 +176,8 @@ const index = () => {
   const onRefresh = () => {
     setRefreshing(true);
     setSearchQuery("");
-    fetchCoins();
+    setPageNum(1);
+    fetchCoins(1);
   };
 
   const renderCoinItem = ({ item }: { item: any }) => (
@@ -226,26 +239,24 @@ const index = () => {
     </TouchableOpacity>
   );
 
-  if (!isConnected && loading) {
+  if (!isConnected && allCoins.length === 0) {
     return <NoConnection onRetry={onRetry} />;
   }
 
-  if (timeoutError && loading) {
+  if (timeoutError && loading && allCoins.length === 0) {
     return (
       <View style={{ alignItems: "center", marginTop: 40 }}>
-        <Text style={{ marginBottom: 10 }}>
-          Failed to fetch data. Please check your connection.
-        </Text>
+        <Text style={{ marginBottom: 10 }}>Something went wrong</Text>
         <Button title="Reload" onPress={onRetry} />
       </View>
     );
   }
 
-  if (error) {
+  if (error && allCoins.length === 0) {
     return <NoConnection onRetry={onRetry} />;
   }
 
-  if (loading) {
+  if (loading && allCoins.length === 0) {
     return (
       <View style={styles.centered}>
         <ActivityIndicator size="large" color="#0066cc" />
@@ -300,6 +311,7 @@ const index = () => {
           </TouchableOpacity>
         )}
       </View>
+
       {/* No results message */}
       {searchQuery.length > 0 && coins.length === 0 && (
         <View style={styles.noResults}>
@@ -314,6 +326,7 @@ const index = () => {
           </Text>
         </View>
       )}
+
       <FlatList
         data={coins}
         renderItem={renderCoinItem}
@@ -347,7 +360,8 @@ const index = () => {
     </View>
   );
 };
-export default index;
+
+export default CoinListScreen;
 
 const styles = StyleSheet.create({
   container: {
@@ -361,20 +375,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     padding: 20,
   },
-  header: {
-    fontSize: 24,
-    fontWeight: "bold",
-    padding: 16,
-    backgroundColor: "#fff",
+  cacheIndicator: {
+    backgroundColor: "#fff3cd",
+    padding: 8,
+    borderRadius: 6,
+    marginHorizontal: 16,
+    marginTop: 8,
+    alignItems: "center",
+  },
+  cacheText: {
+    fontSize: 12,
+    color: "#856404",
+    fontWeight: "500",
   },
   coinItem: {
     flexDirection: "row",
     alignItems: "center",
-
     padding: 16,
-
     marginHorizontal: 8,
-
     borderBottomWidth: 1,
   },
   coinImage: {
@@ -386,25 +404,8 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
-  coinName: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  coinSymbol: {
-    fontSize: 14,
-    color: "#666",
-    marginTop: 4,
-  },
   priceInfo: {
     alignItems: "flex-end",
-  },
-  price: {
-    fontSize: 16,
-    fontWeight: "600",
-  },
-  change: {
-    fontSize: 14,
-    marginTop: 4,
   },
   positiveChange: {
     color: "#16a34a",
@@ -417,24 +418,8 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: "#666",
   },
-  errorText: {
-    fontSize: 16,
-    color: "#dc2626",
-    textAlign: "center",
-  },
-  errorHint: {
-    fontSize: 14,
-    color: "#666",
-    textAlign: "center",
-    marginTop: 8,
-  },
   noResults: {
     padding: 20,
     alignItems: "center",
-  },
-  noResultsText: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
   },
 });

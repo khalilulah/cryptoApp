@@ -1,4 +1,3 @@
-import coinGeckoService from "@/coinGeckoService";
 import { useTheme } from "@/theme";
 import { useNetworkStatus } from "@/useNetworkStatus";
 import React, { useEffect, useState } from "react";
@@ -18,6 +17,7 @@ import Svg, {
   Stop,
   Text as SvgText,
 } from "react-native-svg";
+import coinGeckoService from "../services/coinGeckoService";
 import { NoConnection } from "./NoConnection";
 
 const { width } = Dimensions.get("window");
