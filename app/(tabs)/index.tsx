@@ -332,6 +332,7 @@ const CoinListScreen = () => {
         renderItem={renderCoinItem}
         keyExtractor={(item) => item.id}
         onEndReached={handleLoadMore}
+        showsVerticalScrollIndicator={false}
         onEndReachedThreshold={0.1}
         contentContainerStyle={{ paddingBottom: 30 }}
         refreshControl={
@@ -353,7 +354,8 @@ const CoinListScreen = () => {
                 style={{
                   padding: 10,
                   backgroundColor: "#0286FF",
-                  borderRadius: 5,
+                  alignItems: "center",
+                  borderRadius: 100,
                 }}
                 onPress={onRetry}
               >
@@ -362,6 +364,7 @@ const CoinListScreen = () => {
                     fontFamily: theme.fonts.poppins.regular,
                     fontSize: theme.fontSize.sm,
                     textAlign: "center",
+                    color: theme.colors.text,
                   }}
                 >
                   Reload
@@ -377,29 +380,31 @@ const CoinListScreen = () => {
           ) : null
         }
         ListEmptyComponent={
-          <View style={{ alignItems: "center", marginTop: 40 }}>
-            <Text
-              style={{
-                marginBottom: 10,
-                fontFamily: theme.fonts.poppins.regular,
-                fontSize: theme.fontSize.sm,
-                textAlign: "center",
-              }}
-            >
-              Failed to fetch data. Please check your connection.
-            </Text>
-            <TouchableOpacity onPress={onRetry}>
+          searchQuery.length === 0 ? (
+            <View style={{ alignItems: "center", marginTop: 40 }}>
               <Text
                 style={{
+                  marginBottom: 10,
                   fontFamily: theme.fonts.poppins.regular,
                   fontSize: theme.fontSize.sm,
                   textAlign: "center",
                 }}
               >
-                Reload
+                Failed to fetch data. Please check your connection.
               </Text>
-            </TouchableOpacity>
-          </View>
+              <TouchableOpacity onPress={onRetry}>
+                <Text
+                  style={{
+                    fontFamily: theme.fonts.poppins.regular,
+                    fontSize: theme.fontSize.sm,
+                    textAlign: "center",
+                  }}
+                >
+                  Reload
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : null
         }
       />
     </View>

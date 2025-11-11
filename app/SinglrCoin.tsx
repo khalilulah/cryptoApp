@@ -101,7 +101,18 @@ const SingleCoin = () => {
     return (
       <SafeAreaView style={styles.centered}>
         <ActivityIndicator size="large" color="#0066cc" />
-        <Text style={styles.loadingText}>Loading coin details...</Text>
+        <Text
+          style={[
+            {
+              fontFamily: theme.fonts.clash.medium,
+              fontSize: theme.fontSize.sm,
+              color: theme.colors.ligthText,
+            },
+            styles.loadingText,
+          ]}
+        >
+          Loading coin details...
+        </Text>
       </SafeAreaView>
     );
   }
@@ -374,8 +385,6 @@ const styles = StyleSheet.create({
 
   loadingText: {
     marginTop: 12,
-    fontSize: 16,
-    color: "#666",
   },
   errorText: {
     fontSize: 16,

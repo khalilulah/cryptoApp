@@ -16,12 +16,40 @@ export const NoConnection: React.FC<NoConnectionProps> = ({ onRetry }) => {
         size={wp(15)}
         color={theme.colors.textSecondary}
       />
-      <Text style={localStyles.title}>No Internet Connection</Text>
-      <Text style={localStyles.text}>
+      <Text
+        style={[
+          {
+            fontFamily: theme.fonts.clash.medium,
+            fontSize: theme.fontSize.sm,
+            color: theme.colors.textSecondary,
+          },
+          localStyles.title,
+        ]}
+      >
+        No Internet Connection
+      </Text>
+      <Text
+        style={[
+          {
+            fontFamily: theme.fonts.clash.medium,
+            fontSize: theme.fontSize.sm,
+            color: theme.colors.ligthText,
+          },
+          localStyles.text,
+        ]}
+      >
         Please check your internet connection and try again
       </Text>
       <TouchableOpacity style={localStyles.button} onPress={onRetry}>
-        <Text style={localStyles.buttonText}>Retry</Text>
+        <Text
+          style={{
+            fontFamily: theme.fonts.clash.medium,
+            fontSize: theme.fontSize.sm,
+            color: theme.colors.text,
+          }}
+        >
+          Retry
+        </Text>
       </TouchableOpacity>
     </View>
   );
@@ -40,28 +68,18 @@ const localStyles = StyleSheet.create({
     marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#333",
     marginBottom: 12,
     textAlign: "center",
   },
   text: {
-    fontSize: 16,
-    color: "#666",
-    textAlign: "center",
     marginBottom: 30,
     paddingHorizontal: 40,
+    textAlign: "center",
   },
   button: {
     backgroundColor: "#0066cc",
     paddingHorizontal: 32,
     paddingVertical: 12,
     borderRadius: 8,
-  },
-  buttonText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "600",
   },
 });

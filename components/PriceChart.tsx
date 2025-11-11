@@ -364,7 +364,16 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
         ) : (
           <View style={styles.centered}>
             <ActivityIndicator size="small" color="#0066cc" />
-            <Text style={styles.subText}>
+            <Text
+              style={[
+                styles.subText,
+                {
+                  fontFamily: theme.fonts.clash.medium,
+                  fontSize: theme.fontSize.sm,
+                  color: theme.colors.ligthText,
+                },
+              ]}
+            >
               Loading {selectedPeriod}D chart...
             </Text>
           </View>
@@ -431,8 +440,6 @@ const styles = StyleSheet.create({
   },
   subText: {
     marginTop: 4,
-    color: "#999",
-    fontSize: 12,
   },
   errorText: {
     color: "#dc2626",
