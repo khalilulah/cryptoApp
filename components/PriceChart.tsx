@@ -26,13 +26,21 @@ interface PriceChartProps {
   coinId: string;
 }
 
+interface ChartDataCache {
+  [key: string]: {
+    data: any[];
+    priceChange: number;
+    timestamp: number;
+  };
+}
+
 export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
   const { wp, theme, hp } = useTheme();
-  const [chartData, setChartData] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [chartDataCache, setChartDataCache] = useState<ChartDataCache>({});
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedPeriod, setSelectedPeriod] = useState("7");
-  const [priceChange, setPriceChange] = useState(0);
+  const [prefetching, setPrefetching] = useState(false);
   const { isConnected } = useNetworkStatus();
   const [timeoutError, setTimeoutError] = useState(false);
 
@@ -44,27 +52,60 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
     { label: "1Y", value: "365" },
   ];
 
+  // Prefetch all periods on mount
   useEffect(() => {
-    fetchChartData();
-  }, [coinId, selectedPeriod]);
+    prefetchAllPeriods();
+  }, [coinId]);
 
   const onRetry = () => {
-    fetchChartData();
+    prefetchAllPeriods();
   };
-  const fetchChartData = async () => {
-    setTimeoutError(false);
-    // Timeout handler
-    const timeout = setTimeout(() => {
-      setTimeoutError(true);
-      setLoading(false);
-    }, 5000);
-    try {
-      setLoading(true);
-      setError(null);
 
+  // Prefetch data for all periods
+  const prefetchAllPeriods = async () => {
+    setLoading(false);
+    setError(null);
+    setTimeoutError(false);
+
+    try {
+      // Fetch all periods in parallel
+      const fetchPromises = periods.map((period) =>
+        fetchChartDataForPeriod(period.value)
+      );
+
+      const results = await Promise.allSettled(fetchPromises);
+
+      const newCache: ChartDataCache = {};
+      let successCount = 0;
+
+      results.forEach((result, index) => {
+        if (result.status === "fulfilled" && result.value) {
+          const period = periods[index].value;
+          newCache[period] = result.value;
+          successCount++;
+        }
+      });
+
+      if (successCount > 0) {
+        setChartDataCache(newCache);
+      } else {
+        setError("Failed to load chart data");
+      }
+    } catch (err: any) {
+      setError(err.message);
+      console.error("Chart prefetch error:", err);
+    } finally {
+      setLoading(false);
+      setPrefetching(false);
+    }
+  };
+
+  // Fetch chart data for a specific period
+  const fetchChartDataForPeriod = async (days: string) => {
+    try {
       const result = await coinGeckoService.getCoinMarketChart(coinId, {
         vs_currency: "usd",
-        days: selectedPeriod,
+        days: days,
       });
 
       if (result.success && result.data.prices) {
@@ -76,30 +117,59 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
           })
         );
 
-        setChartData(formattedData);
-
         // Calculate price change
+        let priceChange = 0;
         if (formattedData.length > 0) {
           const firstPrice = formattedData[0].y;
           const lastPrice = formattedData[formattedData.length - 1].y;
-          const change = ((lastPrice - firstPrice) / firstPrice) * 100;
-          setPriceChange(change);
+          priceChange = ((lastPrice - firstPrice) / firstPrice) * 100;
         }
-      } else {
-        setError("Failed to load chart data");
+
+        return {
+          data: formattedData,
+          priceChange,
+          timestamp: Date.now(),
+        };
       }
-    } catch (err: any) {
-      setError(err.message);
-      console.error("Chart fetch error:", err);
-    } finally {
-      clearTimeout(timeout);
-      setLoading(false);
+      return null;
+    } catch (err) {
+      console.error(`Error fetching ${days} day chart:`, err);
+      return null;
     }
   };
 
-  const renderChart = () => {
-    if (chartData.length === 0) return null;
+  // Background refresh for current period
+  const refreshCurrentPeriod = async () => {
+    if (!isConnected) return;
 
+    setPrefetching(true);
+    const newData = await fetchChartDataForPeriod(selectedPeriod);
+
+    if (newData) {
+      setChartDataCache((prev) => ({
+        ...prev,
+        [selectedPeriod]: newData,
+      }));
+    }
+    setPrefetching(false);
+  };
+
+  // Auto-refresh every 30 seconds for current period (optional)
+  useEffect(() => {
+    if (!chartDataCache[selectedPeriod]) return;
+
+    const interval = setInterval(() => {
+      refreshCurrentPeriod();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, [selectedPeriod, isConnected]);
+
+  const renderChart = () => {
+    const currentData = chartDataCache[selectedPeriod];
+    if (!currentData || currentData.data.length === 0) return null;
+
+    const chartData = currentData.data;
     const chartWidth = width - 64;
     const chartHeight = 200;
     const padding = { top: 10, bottom: 30, left: 10, right: 10 };
@@ -139,7 +209,7 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
     areaPath += ` L ${points[0].x} ${chartHeight - padding.bottom}`;
     areaPath += " Z";
 
-    const isPositive = priceChange >= 0;
+    const isPositive = currentData.priceChange >= 0;
     const strokeColor = isPositive ? "#16a34a" : "#dc2626";
     const gradientId = isPositive ? "greenGradient" : "redGradient";
 
@@ -204,19 +274,26 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator size="large" color="#0066cc" />
-        <Text style={styles.loadingText}>Loading chart...</Text>
-      </View>
-    );
-  }
+  // Get loading status for each period
+  const isPeriodLoaded = (value: string) => {
+    return !!chartDataCache[value];
+  };
 
-  if (!isConnected && error) {
+  // if (loading && Object.keys(chartDataCache).length === 0) {
+  //   return (
+  //     <View style={styles.centered}>
+  //       <ActivityIndicator size="large" color="#0066cc" />
+  //       <Text style={styles.loadingText}>Loading chart data...</Text>
+  //       <Text style={styles.subText}>Fetching all periods...</Text>
+  //     </View>
+  //   );
+  // }
+
+  if (!isConnected && Object.keys(chartDataCache).length === 0) {
     return <NoConnection onRetry={onRetry} />;
   }
-  if (timeoutError && loading) {
+
+  if (timeoutError && Object.keys(chartDataCache).length === 0) {
     return (
       <View style={{ alignItems: "center", marginTop: 40 }}>
         <Text
@@ -237,14 +314,25 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
       </View>
     );
   }
-  if (error) {
+
+  if (error && Object.keys(chartDataCache).length === 0) {
     return <NoConnection onRetry={onRetry} />;
   }
 
-  const isPositive = priceChange >= 0;
+  const currentData = chartDataCache[selectedPeriod];
+  const isPositive = currentData ? currentData.priceChange >= 0 : false;
+  const priceChange = currentData ? currentData.priceChange : 0;
 
   return (
     <View style={{ marginVertical: 20 }}>
+      {/* Prefetching indicator */}
+      {prefetching && (
+        <View style={styles.prefetchIndicator}>
+          <ActivityIndicator size="small" color="#0066cc" />
+          <Text style={styles.prefetchText}>Updating...</Text>
+        </View>
+      )}
+
       {/* Price Change Indicator */}
       <View style={{ alignSelf: "flex-end" }}>
         <Text
@@ -270,34 +358,62 @@ export const PriceChart: React.FC<PriceChartProps> = ({ coinId }) => {
       </View>
 
       {/* Chart */}
-      <View style={styles.chartContainer}>{renderChart()}</View>
+      <View style={styles.chartContainer}>
+        {currentData ? (
+          renderChart()
+        ) : (
+          <View style={styles.centered}>
+            <ActivityIndicator size="small" color="#0066cc" />
+            <Text style={styles.subText}>
+              Loading {selectedPeriod}D chart...
+            </Text>
+          </View>
+        )}
+      </View>
 
       {/* Period Selector */}
       <View style={styles.periodSelector}>
-        {periods.map((period) => (
-          <TouchableOpacity
-            key={period.value}
-            style={[
-              styles.periodButton,
-              selectedPeriod === period.value && styles.periodButtonActive,
-            ]}
-            onPress={() => setSelectedPeriod(period.value)}
-          >
-            <Text
+        {periods.map((period) => {
+          const isLoaded = isPeriodLoaded(period.value);
+          const isActive = selectedPeriod === period.value;
+
+          return (
+            <TouchableOpacity
+              key={period.value}
               style={[
-                {
-                  fontFamily: theme.fonts.clash.medium,
-                  fontSize: theme.fontSize.sm,
-                },
-                selectedPeriod === period.value &&
-                  styles.periodButtonTextActive,
+                styles.periodButton,
+                isActive && styles.periodButtonActive,
+                !isLoaded && styles.periodButtonLoading,
               ]}
+              onPress={() => setSelectedPeriod(period.value)}
+              disabled={!isLoaded}
             >
-              {period.label}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              {!isLoaded ? (
+                <ActivityIndicator size="small" color="#999" />
+              ) : (
+                <Text
+                  style={[
+                    {
+                      fontFamily: theme.fonts.clash.medium,
+                      fontSize: theme.fontSize.sm,
+                    },
+                    isActive && styles.periodButtonTextActive,
+                  ]}
+                >
+                  {period.label}
+                </Text>
+              )}
+            </TouchableOpacity>
+          );
+        })}
       </View>
+
+      {/* Offline indicator */}
+      {!isConnected && Object.keys(chartDataCache).length > 0 && (
+        <View style={styles.offlineIndicator}>
+          <Text style={styles.offlineText}>Showing cached data (offline)</Text>
+        </View>
+      )}
     </View>
   );
 };
@@ -311,20 +427,16 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 8,
     color: "#666",
+    fontSize: 14,
+  },
+  subText: {
+    marginTop: 4,
+    color: "#999",
+    fontSize: 12,
   },
   errorText: {
     color: "#dc2626",
     fontSize: 14,
-  },
-
-  periodLabel: {
-    fontSize: 12,
-    color: "#666",
-    marginBottom: 4,
-  },
-  priceChangeText: {
-    fontSize: 24,
-    fontWeight: "bold",
   },
   positiveChange: {
     color: "#16a34a",
@@ -335,6 +447,8 @@ const styles = StyleSheet.create({
   chartContainer: {
     alignItems: "center",
     marginVertical: 10,
+    minHeight: 200,
+    justifyContent: "center",
   },
   periodSelector: {
     flexDirection: "row",
@@ -349,9 +463,15 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 20,
     backgroundColor: "#f0f0f0",
+    minWidth: 50,
+    alignItems: "center",
+    justifyContent: "center",
   },
   periodButtonActive: {
     backgroundColor: "#0066cc",
+  },
+  periodButtonLoading: {
+    backgroundColor: "#f9f9f9",
   },
   periodButtonText: {
     fontSize: 14,
@@ -360,5 +480,30 @@ const styles = StyleSheet.create({
   },
   periodButtonTextActive: {
     color: "#fff",
+  },
+  prefetchIndicator: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: 8,
+    backgroundColor: "#e3f2fd",
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  prefetchText: {
+    marginLeft: 8,
+    fontSize: 12,
+    color: "#0066cc",
+  },
+  offlineIndicator: {
+    marginTop: 12,
+    padding: 8,
+    backgroundColor: "#fff3cd",
+    borderRadius: 8,
+    alignItems: "center",
+  },
+  offlineText: {
+    fontSize: 12,
+    color: "#856404",
   },
 });

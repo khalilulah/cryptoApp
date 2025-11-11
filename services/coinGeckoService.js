@@ -29,12 +29,6 @@ class CoinGeckoService {
       if (useCache) {
         const cached = await cacheService.get(cacheKey);
         if (cached && cached.data) {
-          console.log(
-            `Using cached data for ${endpoint} (age: ${Math.round(
-              cached.age / 1000
-            )}s)`
-          );
-
           // Return cached data immediately
           const result = { success: true, data: cached.data, fromCache: true };
 
